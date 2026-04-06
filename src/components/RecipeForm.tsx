@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import type { Category } from "../types/category";
 import type { NewRecipe, Recipe, RecipeFormData } from "../types/recipe";
+import { uploadImage, deleteImage } from "../services/storageService";
 
 type RecipeFormProps = {
   categories: Category[];
@@ -12,7 +13,7 @@ type RecipeFormProps = {
   onCancelEdit: () => void;
   error: string;
   successMessage: string;
-};
+}; 
 
 const initialForm: RecipeFormData = {
   title: "",
@@ -34,6 +35,7 @@ export default function RecipeForm({
 }: RecipeFormProps) {
   const [form, setForm] = useState<RecipeFormData>(initialForm);
   const [localError, setLocalError] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (editingRecipe) {
@@ -44,8 +46,10 @@ export default function RecipeForm({
         category_id: editingRecipe.category_id.toString(),
       });
       setLocalError("");
+      setImageFile(null);
     } else {
       setForm(initialForm);
+      setImageFile(null);
     }
   }, [editingRecipe]);
 
@@ -69,13 +73,29 @@ export default function RecipeForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
-
+    let image_path: string | undefined;
+    if (imageFile) {
+      try {
+        if (editingRecipe && editingRecipe.image_path) {
+          try {
+            await deleteImage(editingRecipe.image_path);
+          } catch (e) {
+            console.error("Failed to delete old image", e);
+          }
+        }
+        image_path = await uploadImage(imageFile, userId);
+      } catch (err) {
+        setLocalError("Failed to upload image.");
+        return;
+      }
+    }
     if (editingRecipe) {
       const ok = await onEditRecipe(editingRecipe.id, {
         title: form.title.trim(),
         description: form.description.trim(),
         prep_time: Number(form.prep_time),
         category_id: Number(form.category_id),
+        image_path,
       });
       if (ok) onCancelEdit();
     } else {
@@ -86,9 +106,11 @@ export default function RecipeForm({
         category_id: Number(form.category_id),
         user_id: userId,
         owner_email: userEmail,
+        image_path,
       };
       const ok = await onAddRecipe(recipe);
       if (ok) setForm(initialForm);
+      setImageFile(null);
     }
   }
 
@@ -141,6 +163,22 @@ export default function RecipeForm({
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="form-group" style={{ marginBottom: "1rem" }}>
+          <label>Recipe Image (Optional)</label>
+          <input
+            type="file"
+            accept="image/*"
+            key={editingRecipe ? `edit-${editingRecipe.id}` : form.title} // basic key to help reset when needed
+            onChange={(e) => {
+              if (e.target.files && e.target.files[0]) {
+                setImageFile(e.target.files[0]);
+              } else {
+                setImageFile(null);
+              }
+            }}
+          />
         </div>
 
         {localError && <p className="error-msg">{localError}</p>}

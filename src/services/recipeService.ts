@@ -1,5 +1,7 @@
+import { deleteImage } from "./storageService";
 import { supabase } from "../lib/supabaseClient";
-import type { NewRecipe, Recipe } from "../types/recipe";
+import type { NewRecipe } from "../types/recipe";
+
 
 export async function createRecipe(recipe: NewRecipe) {
   return await supabase.from("recipes").insert([recipe]);
@@ -21,6 +23,20 @@ export async function updateRecipe(recipeId: number, updatedRecipe: Partial<NewR
 }
 
 export async function deleteRecipe(recipeId: number) {
+  const { data: recipe } = await supabase
+    .from("recipes")
+    .select("image_path")
+    .eq("id", recipeId)
+    .single();
+
+  if (recipe && recipe.image_path) {
+    try {
+      await deleteImage(recipe.image_path);
+    } catch (e) {
+      console.error("Failed to delete image", e);
+    }
+  }
+
   return await supabase
     .from("recipes")
     .delete()

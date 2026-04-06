@@ -1,5 +1,4 @@
 import { supabase } from "../lib/supabaseClient";
-import type { Favorite } from "../types/favorite";
 
 export async function getFavoritesByUser(userId: string) {
   return await supabase

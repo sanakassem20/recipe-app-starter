@@ -1,4 +1,7 @@
 import type { Recipe } from "../types/recipe";
+import { getImageUrl } from "../services/storageService";
+
+const PLACEHOLDER_URL = "https://placehold.co/600x300/1a1a2e/a0aec0?text=No+Image";
 
 type RecipeCardProps = {
   recipe: Recipe;
@@ -21,8 +24,25 @@ export default function RecipeCard({
   onDelete,
   onToggleFavorite
 }: RecipeCardProps) {
+  const imageUrl = recipe.image_path ? getImageUrl(recipe.image_path) : PLACEHOLDER_URL;
+
   return (
     <div className="recipe-card">
+      <img
+        src={imageUrl}
+        alt={recipe.title}
+        style={{
+          width: "100%",
+          height: "180px",
+          objectFit: "cover",
+          borderRadius: "10px 10px 0 0",
+          marginBottom: "0.75rem",
+          display: "block",
+        }}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = PLACEHOLDER_URL;
+        }}
+      />
       <div className="recipe-card-badge">{categoryName}</div>
       <h3 className="recipe-card-title">{recipe.title}</h3>
       <div className="recipe-card-meta">
@@ -30,11 +50,11 @@ export default function RecipeCard({
         <span>•</span>
         <span>{recipe.prep_time} mins prep</span>
       </div>
-      
+
       <div className="recipe-card-desc">
         <p>{recipe.description}</p>
       </div>
-      
+
       <div className="recipe-card-actions">
         {isOwner && (
           <>
@@ -42,10 +62,10 @@ export default function RecipeCard({
             <button className="btn-danger" onClick={() => onDelete(recipe.id)}>Delete</button>
           </>
         )}
-        
+
         {isLoggedIn ? (
-          <button 
-            className={isFavorite ? "btn-favorite" : "btn-outline"} 
+          <button
+            className={isFavorite ? "btn-favorite" : "btn-outline"}
             onClick={() => onToggleFavorite(recipe.id, isFavorite)}
           >
             {isFavorite ? "★ Favorited" : "☆ Add Favorite"}
